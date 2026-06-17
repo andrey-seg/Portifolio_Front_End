@@ -1,8 +1,8 @@
-interface IshowValue{
+interface IShowValue{
     showAmount(): number;
 }
 
-class Budget implements IshowValue{
+export class Budget implements IShowValue{
     private __totalAmount: number;
     private __expenses: number;
     private __deposit: number;
@@ -31,11 +31,17 @@ class Budget implements IshowValue{
     }
 
     transferToSavings(value: number): void {
+        if (value > this.__totalAmount){
+            throw new Error('Saldo insuficiente em conta');
+        }
         this.__totalAmount -= value;
         this.__savedMoney += value;
     }
 
     transferFromSavings(value: number): void {
+        if (value > this.__savedMoney){
+            throw new Error('Saldo insuficiente na poupança');
+        }
         this.__totalAmount += value;
         this.__savedMoney -= value;
     }
@@ -49,7 +55,7 @@ class Budget implements IshowValue{
     }
 }
 
-class MonthBudget extends Budget{
+export class MonthBudget extends Budget{
     constructor(totalAmount: number, expenses: number, deposit: number){
         super(totalAmount, expenses, deposit);
     }
@@ -67,7 +73,7 @@ class MonthBudget extends Budget{
     }
 }
 
-class Savings implements IshowValue{
+export class Savings implements IShowValue{
     private __balance: number;
 
     constructor(balance: number = 0){
@@ -79,6 +85,9 @@ class Savings implements IshowValue{
     }
 
     withdraw(value: number): void {
+        if (value > this.__balance){
+            throw new Error('Saldo insuficiente na poupança');
+        }
         this.__balance -= value;
     }
 
