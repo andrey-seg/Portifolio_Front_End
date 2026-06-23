@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="pt-BR" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finanças Pessoais — Dashboard</title>
+
+  <!-- ===== CDNs ===== -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js" defer></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js" defer></script>
+
+  <style>
+    /* ===== CSS Variables / Theming ===== */
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-hover: #253249;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #f1f5f9;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --green: #10b981;
+      --green-bg: rgba(16, 185, 129, 0.12);
+      --red: #ef4444;
+      --red-bg: rgba(239, 68, 68, 0.10);
+      --orange: #f59e0b;
+      --orange-bg: rgba(245, 158, 11, 0.12);
+      --blue: #3b82f6;
+      --input-bg: #0f172a;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.35);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      --transition: 0.3s ease;
+    }
+
+    [data-theme="light"] {
+      --bg: #f1f5f9;
+      --surface: #ffffff;
+      --surface-hover: #f8fafc;
+      --card: #ffffff;
+      --border: #e2e8f0;
+      --text: #0f172a;
+      --text-secondary: #475569;
+      --text-muted: #94a3b8;
+      --green: #059669;
+      --green-bg: rgba(5, 150, 105, 0.10);
+      --red: #dc2626;
+      --red-bg: rgba(220, 38, 38, 0.08);
+      --orange: #d97706;
+      --orange-bg: rgba(217, 119, 6, 0.10);
+      --blue: #2563eb;
+      --input-bg: #f1f5f9;
+      --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    }
+
+    /* ===== Reset & Base ===== */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      transition: background var(--transition), color var(--transition);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    button { cursor: pointer; font: inherit; border: none; background: none; color: inherit; }
+    input { font: inherit; border: none; outline: none; }
+    img { display: block; max-width: 100%; }
+
+    /* ===== App Container ===== */
+    .app {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 24px 20px 40px;
+    }
+
+    /* ===== Header ===== */
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .header-logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--green), #059669);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 20px;
+      color: #fff;
+      flex-shrink: 0;
+    }
+    .header h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .header h1 span { color: var(--green); }
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    /* ===== Theme Toggle ===== */
+    .theme-toggle {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: var(--text-secondary);
+      transition: background var(--transition), color var(--transition), transform 0.2s;
+    }
+    .theme-toggle:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+      transform: scale(1.04);
+    }
+
+    /* ===== Export Button ===== */
+    .btn-export {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 12px;
+      background: var(--green);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      border: none;
+      transition: opacity 0.2s, transform 0.2s;
+    }
+    .btn-export:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-export i { font-size: 1rem; }
+
+    .export-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    .export-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      box-shadow: var(--shadow);
+      min-width: 160px;
+      z-index: 50;
+      overflow: hidden;
+    }
+    .export-menu.show { display: block; }
+    .export-menu button {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      width: 100%;
+      padding: 12px 16px;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      transition: background 0.2s;
+    }
+    .export-menu button:hover { background: var(--surface-hover); color: var(--text); }
+    .export-menu button i { width: 18px; text-align: center; }
+
+    /* ===== Input Section ===== */
+    .input-section {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow);
+      transition: background var(--transition), border var(--transition);
+    }
+    .input-section h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .input-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+    }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    .input-group label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .input-group .input-wrapper {
+      display: flex;
+      align-items: center;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 0 14px;
+      transition: border-color 0.2s;
+    }
+    .input-group .input-wrapper:focus-within {
+      border-color: var(--green);
+    }
+    .input-group .input-wrapper span {
+      color: var(--text-muted);
+      font-weight: 500;
+      margin-right: 6px;
+      font-size: 0.95rem;
+    }
+    .input-group .input-wrapper input {
+      background: transparent;
+      color: var(--text);
+      padding: 12px 0;
+      width: 100%;
+      font-size: 0.95rem;
+      font-weight: 500;
+    }
+    .input-group .input-wrapper input::placeholder { color: var(--text-muted); }
+
+    /* Chrome / Safari input number reset */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    input[type="number"] { -moz-appearance: textfield; }
+
+    /* ===== Dashboard Grid ===== */
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px 22px 22px;
+      box-shadow: var(--shadow);
+      transition: background var(--transition), border var(--transition), transform 0.25s;
+    }
+    .card:hover { transform: translateY(-2px); }
+    .card-full { grid-column: 1 / -1; }
+
+    .card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+    .card-header-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .card-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
+      flex-shrink: 0;
+    }
+    .card-icon.green { background: var(--green-bg); color: var(--green); }
+    .card-icon.blue { background: rgba(59, 130, 246, 0.12); color: var(--blue); }
+    .card-icon.orange { background: var(--orange-bg); color: var(--orange); }
+    .card-icon.red { background: var(--red-bg); color: var(--red); }
+
+    .card-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+
+    .card-edit-btn {
+      width: 34px;
+      height: 34px;
+      border-radius: 8px;
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      transition: background 0.2s, color 0.2s;
+    }
+    .card-edit-btn:hover { background: var(--orange-bg); color: var(--orange); }
+
+    /* Card 1 — Total Guardado (KPI grande) */
+    .kpi-value {
+      font-size: 2.4rem;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+      line-height: 1.2;
+      margin-bottom: 6px;
+    }
+    .kpi-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .kpi-badge.up { background: var(--green-bg); color: var(--green); }
+    .kpi-badge.down { background: var(--red-bg); color: var(--red); }
+
+    /* Card 2 — Renda Mensal */
+    .income-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: -0.3px;
+    }
+    .income-sub {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+    .income-bar {
+      margin-top: 14px;
+      height: 6px;
+      border-radius: 3px;
+      background: var(--border);
+      overflow: hidden;
+    }
+    .income-bar-fill {
+      height: 100%;
+      border-radius: 3px;
+      background: linear-gradient(90deg, var(--green), #34d399);
+      transition: width 0.6s ease;
+    }
+
+    /* Card 3 & 4 — Gráficos */
+    .chart-wrapper {
+      position: relative;
+      width: 100%;
+      max-height: 260px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .chart-wrapper canvas {
+      width: 100% !important;
+      height: auto !important;
+      max-height: 250px;
+    }
+
+    /* Card 4 legenda inline */
+    .chart-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-top: 14px;
+      justify-content: center;
+    }
+    .chart-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+    .chart-legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 860px) {
+      .dashboard-grid { grid-template-columns: 1fr; }
+      .app { padding: 16px 14px 32px; }
+      .header h1 { font-size: 1.2rem; }
+      .kpi-value { font-size: 1.8rem; }
+      .income-value { font-size: 1.4rem; }
+      .chart-wrapper { max-height: 200px; }
+      .input-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 480px) {
+      .header { flex-direction: column; align-items: stretch; }
+      .header-actions { justify-content: stretch; }
+      .header-actions .theme-toggle { flex-shrink: 0; }
+      .btn-export { flex: 1; justify-content: center; }
+      .export-dropdown { flex: 1; }
+      .export-dropdown > .btn-export { width: 100%; }
+      .card { padding: 16px; }
+      .kpi-value { font-size: 1.5rem; }
+    }
+
+    /* ===== Modal ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(4px);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .modal-overlay.open { display: flex; }
+
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      width: 100%;
+      max-width: 520px;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      animation: modalIn 0.25s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(0.94) translateY(10px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 24px 0;
+    }
+    .modal-header h2 {
+      font-size: 1.1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .modal-header h2 i { color: var(--orange); }
+    .modal-close {
+      width: 36px;
+      height: 36px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      color: var(--text-muted);
+      transition: background 0.2s;
+    }
+    .modal-close:hover { background: var(--surface-hover); color: var(--text); }
+
+    .modal-body {
+      padding: 16px 24px 12px;
+      overflow-y: auto;
+      flex: 1;
+    }
+
+    .invest-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      padding: 10px 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.2s;
+    }
+    .invest-row:focus-within { border-color: var(--orange); }
+
+    .invest-color {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      border: 2px solid var(--border);
+    }
+    .invest-row input[type="text"] {
+      flex: 1;
+      min-width: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.9rem;
+      padding: 4px 0;
+      border: none;
+      outline: none;
+    }
+    .invest-row input[type="text"]::placeholder { color: var(--text-muted); }
+    .invest-row .pct-wrap {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      flex-shrink: 0;
+    }
+    .invest-row .pct-wrap input {
+      width: 58px;
+      text-align: right;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 4px 0;
+      border: none;
+      outline: none;
+    }
+    .invest-row .pct-wrap input::-webkit-inner-spin-button,
+    .invest-row .pct-wrap input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .invest-row .pct-wrap input[type="number"] { -moz-appearance: textfield; }
+    .invest-row .pct-wrap span {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .btn-remove-row {
+      width: 30px;
+      height: 30px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      flex-shrink: 0;
+      transition: background 0.2s, color 0.2s;
+    }
+    .btn-remove-row:hover { background: var(--red-bg); color: var(--red); }
+
+    .btn-add {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      width: 100%;
+      padding: 10px;
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: background 0.2s, color 0.2s, border-color 0.2s;
+      margin-top: 4px;
+    }
+    .btn-add:hover {
+      background: var(--surface-hover);
+      color: var(--text);
+      border-color: var(--text-muted);
+    }
+
+    .invest-total {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 6px;
+      margin-top: 14px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+    .invest-total span { font-size: 1.1rem; }
+    .invest-total span.ok { color: var(--green); }
+    .invest-total span.warn { color: var(--red); }
+
+    .modal-footer {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      padding: 12px 24px 20px;
+    }
+    .btn-cancel {
+      padding: 10px 22px;
+      border-radius: var(--radius-sm);
+      background: var(--surface-hover);
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: background 0.2s;
+    }
+    .btn-cancel:hover { background: var(--border); color: var(--text); }
+    .btn-save {
+      padding: 10px 24px;
+      border-radius: var(--radius-sm);
+      background: var(--orange);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: opacity 0.2s;
+    }
+    .btn-save:hover { opacity: 0.9; }
+    .btn-save:disabled { opacity: 0.4; cursor: default; }
+
+    /* ===== Monthly Grid ===== */
+    .months-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+    .month-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding: 10px 12px;
+      background: var(--input-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      transition: border-color 0.2s;
+    }
+    .month-field:focus-within { border-color: var(--blue); }
+    .month-field label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+    }
+    .month-field .mf-input {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+    }
+    .month-field .mf-input span {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-weight: 500;
+    }
+    .month-field .mf-input input {
+      width: 100%;
+      min-width: 0;
+      background: transparent;
+      color: var(--text);
+      font-size: 0.9rem;
+      font-weight: 600;
+      padding: 4px 0;
+      border: none;
+      outline: none;
+    }
+    .month-field .mf-input input::-webkit-inner-spin-button,
+    .month-field .mf-input input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+    .month-field .mf-input input[type="number"] { -moz-appearance: textfield; }
+
+    @media (max-width: 600px) {
+      .months-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* ===== Loading / Status ===== */
+    .text-center { text-align: center; }
+    .mt-8 { margin-top: 8px; }
+    .mb-4 { margin-bottom: 4px; }
+
+    /* ===== Export loading overlay ===== */
+    .exporting .btn-export { pointer-events: none; opacity: 0.6; }
+  </style>
+</head>
+<body>
+
+  <div class="app">
+
+    <!-- ===== HEADER ===== -->
+    <header class="header">
+      <div class="header-left">
+        <div class="header-logo"><i class="fa-solid fa-chart-line"></i></div>
+        <h1>Finanças <span>Pessoais</span></h1>
+      </div>
+      <div class="header-actions">
+        <button class="theme-toggle" id="themeToggle" aria-label="Alternar tema">
+          <i class="fa-solid fa-moon"></i>
+        </button>
+        <div class="export-dropdown">
+          <button class="btn-export" id="exportBtn">
+            <i class="fa-solid fa-download"></i> Exportar
+          </button>
+          <div class="export-menu" id="exportMenu">
+            <button data-format="png"><i class="fa-regular fa-image"></i> PNG</button>
+            <button data-format="pdf"><i class="fa-regular fa-file-pdf"></i> PDF</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== INPUT SECTION ===== -->
+    <section class="input-section">
+      <h2><i class="fa-solid fa-sliders"></i> Seus Dados Financeiros</h2>
+      <div class="input-grid">
+        <div class="input-group">
+          <label for="totalInvestido">Total Investido</label>
+          <div class="input-wrapper">
+            <span>R$</span>
+            <input type="number" id="totalInvestido" value="25000" min="0" step="100" />
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="rendaMensal">Renda Mensal</label>
+          <div class="input-wrapper">
+            <span>R$</span>
+            <input type="number" id="rendaMensal" value="5200" min="0" step="100" />
+          </div>
+        </div>
+        <div class="input-group">
+          <label for="gastosMensais">Gastos Mensais</label>
+          <div class="input-wrapper">
+            <span>R$</span>
+            <input type="number" id="gastosMensais" value="3100" min="0" step="100" />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== DASHBOARD GRID ===== -->
+    <div class="dashboard-grid" id="dashboardGrid">
+
+      <!-- Card 1 — Total Guardado -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="card-icon green"><i class="fa-solid fa-piggy-bank"></i></div>
+            <span class="card-title">Total Guardado</span>
+          </div>
+        </div>
+        <div class="kpi-value" id="totalGuardado">R$ 0</div>
+        <div>
+          <span class="kpi-badge up" id="growthBadge">
+            <i class="fa-solid fa-arrow-up"></i> +0% este mês
+          </span>
+        </div>
+      </div>
+
+      <!-- Card 2 — Renda Mensal -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="card-icon blue"><i class="fa-solid fa-money-bill-wave"></i></div>
+            <span class="card-title">Dinheiro Mensal / Entrada</span>
+          </div>
+        </div>
+        <div class="income-value" id="rendaExibida">R$ 0</div>
+        <div class="income-sub">
+          <span id="gastosTexto">Gastos: R$ 0</span>
+          <span style="margin:0 6px;color:var(--text-muted)">•</span>
+          <span id="saldoLiquido" style="color:var(--green)">Saldo: R$ 0</span>
+        </div>
+        <div class="income-bar">
+          <div class="income-bar-fill" id="incomeBarFill" style="width:60%"></div>
+        </div>
+      </div>
+
+      <!-- Card 3 — Donut / Investimentos -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="card-icon orange"><i class="fa-solid fa-chart-pie"></i></div>
+            <span class="card-title">Distribuição de Investimentos</span>
+          </div>
+          <button class="card-edit-btn" id="editInvestBtn" title="Gerenciar investimentos">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="donutChart"></canvas>
+        </div>
+        <div class="chart-legend" id="donutLegend"></div>
+      </div>
+
+      <!-- Card 4 — Line / Evolução -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-left">
+            <div class="card-icon red"><i class="fa-solid fa-chart-line"></i></div>
+            <span class="card-title">Evolução do Saldo Disponível</span>
+          </div>
+          <button class="card-edit-btn" id="editMonthsBtn" title="Editar saldo mensal">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+        </div>
+        <div class="chart-wrapper">
+          <canvas id="lineChart"></canvas>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===== MONTHLY BALANCE MODAL ===== -->
+  <div class="modal-overlay" id="monthsModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-calendar-days"></i> Saldo por Mês</h2>
+        <button class="modal-close" id="monthsModalClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:16px;">
+          Insira o saldo disponível de cada mês para atualizar o gráfico de evolução.
+        </p>
+        <div class="months-grid" id="monthsGrid"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="monthsModalCancel">Cancelar</button>
+        <button class="btn-save" id="monthsModalSave">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== INVESTMENT MODAL ===== -->
+  <div class="modal-overlay" id="investModal">
+    <div class="modal">
+      <div class="modal-header">
+        <h2><i class="fa-solid fa-chart-pie"></i> Gerenciar Investimentos</h2>
+        <button class="modal-close" id="modalClose"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body">
+        <div class="invest-rows" id="investRows"></div>
+        <button class="btn-add" id="addInvestBtn">
+          <i class="fa-solid fa-plus"></i> Adicionar Investimento
+        </button>
+        <div class="invest-total" id="investTotal">
+          Total: <span id="totalPct">0</span>%
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" id="modalCancel">Cancelar</button>
+        <button class="btn-save" id="modalSave">Salvar</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ============================================================
+       JavaScript — Organizador Financeiro Pessoal
+       ============================================================ */
+
+    (function () {
+      'use strict';
+
+      /* ---------- DOM refs ---------- */
+      const totalInvestidoInput = document.getElementById('totalInvestido');
+      const rendaMensalInput = document.getElementById('rendaMensal');
+      const gastosMensaisInput = document.getElementById('gastosMensais');
+
+      const totalGuardadoEl = document.getElementById('totalGuardado');
+      const growthBadge = document.getElementById('growthBadge');
+      const rendaExibida = document.getElementById('rendaExibida');
+      const gastosTexto = document.getElementById('gastosTexto');
+      const saldoLiquido = document.getElementById('saldoLiquido');
+      const incomeBarFill = document.getElementById('incomeBarFill');
+
+      const themeToggle = document.getElementById('themeToggle');
+      const exportBtn = document.getElementById('exportBtn');
+      const exportMenu = document.getElementById('exportMenu');
+
+      const donutCanvas = document.getElementById('donutChart');
+      const lineCanvas = document.getElementById('lineChart');
+      const donutLegend = document.getElementById('donutLegend');
+
+      const editInvestBtn = document.getElementById('editInvestBtn');
+      const investModal = document.getElementById('investModal');
+      const modalClose = document.getElementById('modalClose');
+      const modalCancel = document.getElementById('modalCancel');
+      const modalSave = document.getElementById('modalSave');
+      const investRows = document.getElementById('investRows');
+      const addInvestBtn = document.getElementById('addInvestBtn');
+      const totalPct = document.getElementById('totalPct');
+
+      const editMonthsBtn = document.getElementById('editMonthsBtn');
+      const monthsModal = document.getElementById('monthsModal');
+      const monthsModalClose = document.getElementById('monthsModalClose');
+      const monthsModalCancel = document.getElementById('monthsModalCancel');
+      const monthsModalSave = document.getElementById('monthsModalSave');
+      const monthsGrid = document.getElementById('monthsGrid');
+
+      /* ---------- State ---------- */
+      let donutChart = null;
+      let lineChart = null;
+      let pendingAllocations = [];
+
+      const COLOR_PALETTE = [
+        '#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899',
+        '#06b6d4', '#f97316', '#6366f1', '#14b8a6', '#e11d48',
+      ];
+
+      function defaultAllocations() {
+        return [
+          { label: 'Renda Fixa',    pct: 35, color: '#10b981' },
+          { label: 'Ações',         pct: 25, color: '#3b82f6' },
+          { label: 'Fundos Imobiliários', pct: 20, color: '#f59e0b' },
+          { label: 'Criptomoedas',  pct: 10, color: '#8b5cf6' },
+          { label: 'Poupança',      pct: 10, color: '#ec4899' },
+        ];
+      }
+
+      function loadAllocations() {
+        try {
+          const saved = localStorage.getItem('investAllocations');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+          }
+        } catch (_) { /* ignore */ }
+        return defaultAllocations();
+      }
+
+      let INVEST_ALLOCATION = loadAllocations();
+
+      function persistAllocations() {
+        localStorage.setItem('investAllocations', JSON.stringify(INVEST_ALLOCATION));
+      }
+
+      // Month labels for line chart
+      const MONTHS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+
+      /* ---------- Monthly Balances ---------- */
+      let monthlyBalances = [];
+
+      function generateDefaultBalances() {
+        var inv = parseFloat(totalInvestidoInput.value) || 0;
+        var renda = parseFloat(rendaMensalInput.value) || 0;
+        var gastos = parseFloat(gastosMensaisInput.value) || 0;
+        var saldoMensal = renda - gastos;
+        var base = Math.max(inv, 1000);
+        return MONTHS.map(function (_, i) {
+          return Math.round(base + saldoMensal * (i + 1) * 0.85);
+        });
+      }
+
+      function loadMonthlyBalances() {
+        try {
+          var saved = localStorage.getItem('monthlyBalances');
+          if (saved) {
+            var parsed = JSON.parse(saved);
+            if (Array.isArray(parsed) && parsed.length === 12) return parsed;
+          }
+        } catch (_) {}
+        return generateDefaultBalances();
+      }
+
+      function persistMonthlyBalances() {
+        localStorage.setItem('monthlyBalances', JSON.stringify(monthlyBalances));
+      }
+
+      monthlyBalances = loadMonthlyBalances();
+
+      /* ---------- Helpers ---------- */
+      function fmt(n) {
+        return n.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      /* ---------- Update Cards ---------- */
+      function updateCards() {
+        const totalInv = parseFloat(totalInvestidoInput.value) || 0;
+        const renda = parseFloat(rendaMensalInput.value) || 0;
+        const gastos = parseFloat(gastosMensaisInput.value) || 0;
+        const saldo = renda - gastos;
+
+        // Card 1 — Total Guardado (igual ao total investido)
+        const guardado = totalInv;
+        totalGuardadoEl.textContent = `R$ ${fmt(guardado)}`;
+
+        const growthPct = totalInv > 0 ? (saldo / totalInv) * 100 : 0;
+        const isUp = growthPct >= 0;
+        growthBadge.className = `kpi-badge ${isUp ? 'up' : 'down'}`;
+        growthBadge.innerHTML = `
+          <i class="fa-solid fa-arrow-${isUp ? 'up' : 'down'}"></i>
+          ${isUp ? '+' : ''}${growthPct.toFixed(1)}% este mês
+        `;
+
+        // Card 2 — Renda Mensal
+        rendaExibida.textContent = `R$ ${fmt(renda)}`;
+        gastosTexto.innerHTML = `Gastos: R$ ${fmt(gastos)}`;
+        const saldoCor = saldo >= 0 ? 'var(--green)' : 'var(--red)';
+        saldoLiquido.innerHTML = `Saldo: R$ ${fmt(saldo)}`;
+        saldoLiquido.style.color = saldoCor;
+
+        const maxIncome = Math.max(renda, 1);
+        const barWidth = Math.min(100, (gastos / maxIncome) * 100);
+        incomeBarFill.style.width = `${barWidth}%`;
+        incomeBarFill.style.background =
+          saldo >= 0
+            ? 'linear-gradient(90deg, var(--green), #34d399)'
+            : 'linear-gradient(90deg, var(--red), #f87171)';
+      }
+
+      /* ---------- Donut Chart ---------- */
+      function buildDonut() {
+        const totalInv = parseFloat(totalInvestidoInput.value) || 0;
+
+        const data = INVEST_ALLOCATION.map((item) => ({
+          label: item.label,
+          value: (item.pct / 100) * totalInv,
+          color: item.color,
+        }));
+
+        if (donutChart) { donutChart.destroy(); }
+
+        const ctx = donutCanvas.getContext('2d');
+        donutChart = new Chart(ctx, {
+          type: 'doughnut',
+          data: {
+            labels: data.map((d) => d.label),
+            datasets: [{
+              data: data.map((d) => d.value),
+              backgroundColor: data.map((d) => d.color),
+              borderWidth: 2,
+              borderColor: 'transparent',
+              hoverOffset: 8,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            cutout: '68%',
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'var(--surface)',
+                titleColor: 'var(--text)',
+                bodyColor: 'var(--text-secondary)',
+                borderColor: 'var(--border)',
+                borderWidth: 1,
+                cornerRadius: 8,
+                padding: 12,
+                callbacks: {
+                  label: function (ctx) {
+                    const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                    const pct = total > 0 ? ((ctx.parsed / total) * 100).toFixed(1) : 0;
+                    return `R$ ${fmt(ctx.parsed)}  (${pct}%)`;
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        // Update legend
+        donutLegend.innerHTML = data
+          .map(
+            (d) => `
+            <div class="chart-legend-item">
+              <span class="chart-legend-dot" style="background:${d.color}"></span>
+              ${d.label}
+            </div>`
+          )
+          .join('');
+      }
+
+      /* ---------- Line Chart ---------- */
+      function buildLine() {
+        if (lineChart) { lineChart.destroy(); }
+
+        var data = monthlyBalances.length === 12 ? monthlyBalances : generateDefaultBalances();
+
+        const ctx = lineCanvas.getContext('2d');
+        const gradient = ctx.createLinearGradient(0, 0, 0, 200);
+        gradient.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
+        gradient.addColorStop(1, 'rgba(16, 185, 129, 0.01)');
+
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+        const textColor = isDark ? '#94a3b8' : '#64748b';
+
+        lineChart = new Chart(ctx, {
+          type: 'line',
+          data: {
+            labels: MONTHS,
+            datasets: [{
+              label: 'Saldo Disponível',
+              data: data,
+              borderColor: '#10b981',
+              backgroundColor: gradient,
+              fill: true,
+              tension: 0.4,
+              pointRadius: 4,
+              pointBackgroundColor: '#10b981',
+              pointBorderColor: '#fff',
+              pointBorderWidth: 2,
+              pointHoverRadius: 6,
+              borderWidth: 3,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: 'var(--surface)',
+                titleColor: 'var(--text)',
+                bodyColor: 'var(--text-secondary)',
+                borderColor: 'var(--border)',
+                borderWidth: 1,
+                cornerRadius: 8,
+                padding: 12,
+                callbacks: {
+                  label: function (ctx) {
+                    return `R$ ${fmt(ctx.parsed.y)}`;
+                  },
+                },
+              },
+            },
+            scales: {
+              x: {
+                grid: { color: gridColor, drawBorder: false },
+                ticks: { color: textColor, maxTicksLimit: 12 },
+              },
+              y: {
+                grid: { color: gridColor, drawBorder: false },
+                ticks: {
+                  color: textColor,
+                  callback: function (v) {
+                    return 'R$ ' + (v / 1000).toFixed(1) + 'k';
+                  },
+                },
+              },
+            },
+          },
+        });
+      }
+
+      /* ---------- Modal — Investimentos ---------- */
+      function openInvestModal() {
+        pendingAllocations = INVEST_ALLOCATION.map(function (a) {
+          return { label: a.label, pct: a.pct, color: a.color };
+        });
+        renderInvestRows();
+        investModal.classList.add('open');
+      }
+
+      function closeInvestModal() {
+        investModal.classList.remove('open');
+      }
+
+      function renderInvestRows() {
+        investRows.innerHTML = '';
+        pendingAllocations.forEach(function (alloc, index) {
+          var row = document.createElement('div');
+          row.className = 'invest-row';
+
+          var dot = document.createElement('span');
+          dot.className = 'invest-color';
+          dot.style.background = alloc.color;
+          row.appendChild(dot);
+
+          var nameInput = document.createElement('input');
+          nameInput.type = 'text';
+          nameInput.placeholder = 'Nome do investimento';
+          nameInput.value = alloc.label;
+          nameInput.addEventListener('input', function () {
+            pendingAllocations[index].label = nameInput.value;
+          });
+          row.appendChild(nameInput);
+
+          var pctWrap = document.createElement('div');
+          pctWrap.className = 'pct-wrap';
+
+          var pctInput = document.createElement('input');
+          pctInput.type = 'number';
+          pctInput.min = '0';
+          pctInput.max = '100';
+          pctInput.value = alloc.pct;
+          pctInput.addEventListener('input', function () {
+            pendingAllocations[index].pct = Math.max(0, Math.min(100, parseFloat(pctInput.value) || 0));
+            updateTotalPct();
+          });
+          pctWrap.appendChild(pctInput);
+
+          var pctSign = document.createElement('span');
+          pctSign.textContent = '%';
+          pctWrap.appendChild(pctSign);
+          row.appendChild(pctWrap);
+
+          var removeBtn = document.createElement('button');
+          removeBtn.className = 'btn-remove-row';
+          removeBtn.innerHTML = '<i class="fa-solid fa-trash-can"></i>';
+          removeBtn.title = 'Remover';
+          removeBtn.addEventListener('click', function () {
+            pendingAllocations.splice(index, 1);
+            renderInvestRows();
+            updateTotalPct();
+          });
+          row.appendChild(removeBtn);
+
+          investRows.appendChild(row);
+        });
+        updateTotalPct();
+      }
+
+      function updateTotalPct() {
+        var sum = pendingAllocations.reduce(function (acc, a) { return acc + a.pct; }, 0);
+        totalPct.textContent = sum;
+        totalPct.className = Math.abs(sum - 100) < 0.01 ? 'ok' : 'warn';
+        modalSave.disabled = Math.abs(sum - 100) >= 0.01;
+      }
+
+      function saveInvestments() {
+        // Remove empty-label rows
+        INVEST_ALLOCATION = pendingAllocations.filter(function (a) {
+          return a.label.trim() !== '';
+        });
+
+        // Auto-assign colors for new rows that have default
+        INVEST_ALLOCATION.forEach(function (a, i) {
+          if (!a.color || a.color === '#888') {
+            a.color = COLOR_PALETTE[i % COLOR_PALETTE.length];
+          }
+        });
+
+        persistAllocations();
+        closeInvestModal();
+        buildDonut();
+      }
+
+      function addInvestRow() {
+        var usedColors = pendingAllocations.map(function (a) { return a.color; });
+        var nextColor = COLOR_PALETTE.find(function (c) { return usedColors.indexOf(c) === -1; }) || COLOR_PALETTE[0];
+        pendingAllocations.push({ label: '', pct: 0, color: nextColor });
+        renderInvestRows();
+        // Focus the newly added row's name input
+        var rows = investRows.querySelectorAll('.invest-row');
+        var lastRow = rows[rows.length - 1];
+        if (lastRow) {
+          var inp = lastRow.querySelector('input[type="text"]');
+          if (inp) inp.focus();
+        }
+      }
+
+      /* ---------- Modal — Saldo Mensal ---------- */
+      var pendingMonths = [];
+
+      function openMonthsModal() {
+        pendingMonths = monthlyBalances.slice();
+        renderMonthsGrid();
+        monthsModal.classList.add('open');
+      }
+
+      function closeMonthsModal() {
+        monthsModal.classList.remove('open');
+      }
+
+      function renderMonthsGrid() {
+        monthsGrid.innerHTML = '';
+        MONTHS.forEach(function (month, i) {
+          var field = document.createElement('div');
+          field.className = 'month-field';
+
+          var label = document.createElement('label');
+          label.textContent = month;
+          field.appendChild(label);
+
+          var wrap = document.createElement('div');
+          wrap.className = 'mf-input';
+
+          var sig = document.createElement('span');
+          sig.textContent = 'R$';
+          wrap.appendChild(sig);
+
+          var inp = document.createElement('input');
+          inp.type = 'number';
+          inp.min = '0';
+          inp.value = pendingMonths[i];
+          inp.addEventListener('input', function () {
+            pendingMonths[i] = Math.max(0, parseFloat(inp.value) || 0);
+          });
+          wrap.appendChild(inp);
+
+          field.appendChild(wrap);
+          monthsGrid.appendChild(field);
+        });
+      }
+
+      function saveMonths() {
+        monthlyBalances = pendingMonths.slice();
+        persistMonthlyBalances();
+        closeMonthsModal();
+        buildLine();
+      }
+
+      /* ---------- Update All ---------- */
+      function updateAll() {
+        updateCards();
+        buildDonut();
+        buildLine();
+      }
+
+      /* ---------- Theme ---------- */
+      function initTheme() {
+        const saved = localStorage.getItem('theme') || 'dark';
+        document.documentElement.setAttribute('data-theme', saved);
+        updateThemeIcon(saved);
+      }
+
+      function toggleTheme() {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+        updateThemeIcon(next);
+        // Rebuild charts so grid colors update
+        buildLine();
+        buildDonut();
+      }
+
+      function updateThemeIcon(theme) {
+        const icon = themeToggle.querySelector('i');
+        icon.className = theme === 'dark' ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+      }
+
+      /* ---------- Export ---------- */
+      let isExporting = false;
+
+      async function exportDashboard(format) {
+        if (isExporting) return;
+        isExporting = true;
+        document.body.classList.add('exporting');
+
+        try {
+          const grid = document.getElementById('dashboardGrid');
+          const canvas = await html2canvas(grid, {
+            backgroundColor: getComputedStyle(document.body).backgroundColor,
+            scale: 2,
+            useCORS: true,
+            logging: false,
+          });
+
+          if (format === 'png') {
+            const link = document.createElement('a');
+            link.download = 'dashboard-financeiro.png';
+            link.href = canvas.toDataURL('image/png');
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+          } else if (format === 'pdf') {
+            const { jsPDF } = window.jspdf;
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF('l', 'mm', 'a4');
+            const pdfW = pdf.internal.pageSize.getWidth();
+            const pdfH = (canvas.height * pdfW) / canvas.width;
+            pdf.addImage(imgData, 'PNG', 0, 0, pdfW, pdfH);
+            pdf.save('dashboard-financeiro.pdf');
+          }
+        } catch (err) {
+          console.error('Export error:', err);
+          alert('Ocorreu um erro ao exportar. Tente novamente.');
+        } finally {
+          isExporting = false;
+          document.body.classList.remove('exporting');
+        }
+      }
+
+      /* ---------- Events ---------- */
+      // Inputs → realtime update
+      totalInvestidoInput.addEventListener('input', updateAll);
+      rendaMensalInput.addEventListener('input', updateAll);
+      gastosMensaisInput.addEventListener('input', updateAll);
+
+      // Theme toggle
+      themeToggle.addEventListener('click', toggleTheme);
+
+      // Export dropdown
+      exportBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        exportMenu.classList.toggle('show');
+      });
+      document.addEventListener('click', function () {
+        exportMenu.classList.remove('show');
+      });
+      exportMenu.addEventListener('click', function (e) {
+        const btn = e.target.closest('[data-format]');
+        if (!btn) return;
+        exportMenu.classList.remove('show');
+        exportDashboard(btn.dataset.format);
+      });
+
+      // Investment modal
+      editInvestBtn.addEventListener('click', openInvestModal);
+      modalClose.addEventListener('click', closeInvestModal);
+      modalCancel.addEventListener('click', closeInvestModal);
+      addInvestBtn.addEventListener('click', addInvestRow);
+      modalSave.addEventListener('click', saveInvestments);
+      investModal.addEventListener('click', function (e) {
+        if (e.target === investModal) closeInvestModal();
+      });
+
+      // Monthly balance modal
+      editMonthsBtn.addEventListener('click', openMonthsModal);
+      monthsModalClose.addEventListener('click', closeMonthsModal);
+      monthsModalCancel.addEventListener('click', closeMonthsModal);
+      monthsModalSave.addEventListener('click', saveMonths);
+      monthsModal.addEventListener('click', function (e) {
+        if (e.target === monthsModal) closeMonthsModal();
+      });
+
+      // Debounced resize handler for charts
+      let resizeTimer;
+      window.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+          buildDonut();
+          buildLine();
+        }, 200);
+      });
+
+      /* ---------- Init ---------- */
+      initTheme();
+      updateAll();
+
+      // Wait for Chart.js CDN (in case of slow load)
+      if (typeof Chart === 'undefined') {
+        const check = setInterval(function () {
+          if (typeof Chart !== 'undefined') {
+            clearInterval(check);
+            updateAll();
+          }
+        }, 200);
+        setTimeout(function () { clearInterval(check); }, 8000);
+      }
+
+    })();
+  </script>
+
+</body>
+</html>
